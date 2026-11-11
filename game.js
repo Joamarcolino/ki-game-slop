@@ -55,6 +55,7 @@ const DEF = {
   vol: 0.6,
   v: 5,
   floor: 0.2,
+  bio: [1, 1.65, 3.2, 6.5, 12],
   fm: {
     Saiyan: [10, 50, 100, 400, 800, 1500, 3000],
     Namekian: [3, 12, 120, 500],
@@ -64,7 +65,7 @@ const DEF = {
 };
 const LBL = {
   growth: "Post-fight growth ×",
-  inFight: "In-fight growth/action",
+  inFight: "Effort growth sensitivity ×",
   enemyScale: "Enemy power ×",
   enemyGrow: "Enemy growth/action",
   dmgP: "Your damage ×",
@@ -118,17 +119,26 @@ const FC = {
   Namekian: ["#35b04f", "#9be89b", "#ffe34a", "#ff9a3c"],
   Human: ["#ff2d2d", "#ff2d2d", "#ff2d2d", "#ff2d2d", "#ff2d2d", "#9fd8ff", "#d8d8ff"],
   "Frost Demon": ["#c9a0ff", "#b080e0", "#e8e0ff", "#ffd84a", "#ff2d2d"],
+  "Bio-Android": ["#7dbb55", "#93d86a", "#c7f28a", "#d9f5b0", "#8df0dc"],
 };
 // ============================================================
 // TEXT: race passives (the real effects are coded in atk / hurt / upd)
 // ============================================================
+const BIO_STAGES = [
+  { name: "Imperfect Cell", wins: 0, mult: 1, desc: "Adaptive bio-armor, moderate regeneration and balanced attributes." },
+  { name: "Semi-Perfect Cell", wins: 3, mult: 1.65, desc: "Heavier bio-armor, stronger strikes and improved regeneration." },
+  { name: "Perfect Cell", wins: 7, mult: 3.2, desc: "Refined cellular structure, high ki efficiency and balanced combat output." },
+  { name: "Super Perfect Cell", wins: 12, mult: 6.5, desc: "Overcharged cells, volatile aura and improved recovery." },
+  { name: "Ultimate Bio-Android", wins: 18, mult: 12, desc: "Fully adapted organism with peak regeneration and combat efficiency." },
+];
 const PAS = {
+  "Bio-Android": "Adaptive Evolution: no transformations. Five cellular stages unlock through combat data, changing body plating, regeneration, ki efficiency and power.",
   "Frost Demon":
     "Cold Royalty: ki costs -15%, forms drain 30% less (you hold power back), +25% damage to bleeding/burning/injured foes. Forms: 2nd, 3rd, Final, Golden, Black (last two have custom colors in Config).",
   Alien:
     "Genetic Wildcard: 2 random body traits (arms, claws, wings...) and ONE customizable form (name and colors in Config). Every 3 wins your build (your highest stat) evolves a new trait. Alien bloodlines: the Ginyu Force members (Captain Ginyu, Guldo, Recoome, Burter, Jeice), Hit, Zarbon, Dodoria.",
   Saiyan:
-    "Zenkai: first time under 25% HP each fight you heal 20% and gain a small permanent stat boost (+8%). Battle Lust: damage rises up to +50% as HP falls. Grows 20% faster after fights.",
+    "Zenkai: once per fight under 25% HP, recover 20% HP and gain a temporary battle surge. Battle Lust: damage rises as HP falls. Permanent growth is earned through fight effort, not low-HP farming.",
   Namekian:
     "Regeneration: heal 1.5% HP/s after 3s unhit. Keen Sense: +25% dodge window. Ki techs cost 15% less. Giant Form unlocks early.",
   Human:
@@ -149,13 +159,13 @@ const TECH = {
 // ============================================================
 const MV = {
   punch: { id: "punch", sta: 6, fat: 4, m: 1, k: "phys", lock: 0.35 },
-  heavy: { id: "heavy", sta: 16, fat: 10, m: 3.2, k: "phys", lock: 0.8 },
-  blast: { id: "blast", ki: 7, fat: 5, m: 1.8, k: "ki", lock: 0.45 },
+  heavy: { id: "heavy", sta: 16, fat: 10, m: 3.5, k: "phys", lock: 0.8 },
+  blast: { id: "blast", ki: 7, fat: 5, m: 2.0, k: "ki", lock: 0.45 },
 };
 // ============================================================
 // ENEMIES: [name, color, forms]. Forms trigger as their HP drops: [hp fraction, power multiplier, name]
 // ============================================================
-const ED = [
+let ED = [
   ["Raditz", "#e8b98a", [[0.5, 2.5, "Full Power"]]],
   ["Nappa", "#e8b98a", [[0.5, 2.5, "Full Power"]]],
   [
@@ -253,8 +263,29 @@ const ED = [
     ],
   ],
   ["Saitama (SECRET)", "#f5d0a9"],
+  ["King Gomah", "#c98d7a", [[0.45, 3, "Third Eye Power"]]],
+  ["Tamagami Number One", "#d4bd9a", [[0.5, 2.5, "Guardian Unleashed"]]],
+  ["Tamagami Number Two", "#b5c4d8", [[0.5, 2.5, "Guardian Unleashed"]]],
+  ["Tamagami Number Three", "#9bc9a1", [[0.5, 2.5, "Guardian Unleashed"]]],
+  ["Majin Kuu", "#d4a6cf", [[0.5, 2.5, "Power Unleashed"]]],
+  ["General Rilldo", "#8c9eaa", [[0.55, 3, "Hyper Meta-Rilldo"]]],
+  ["Baby", "#d8c6b0", [[0.65, 2, "Super Baby 2"], [0.3, 5, "Great Ape Baby"]]],
+  ["Super 17", "#d4c6a0", [[0.5, 4, "Hell Fighter Fusion"]]],
+  ["Syn Shenron", "#8d9b9b", [[0.5, 4, "Omega Shenron"]]],
+  ["Eis Shenron", "#9bd4e8", [[0.5, 2.5, "Full Power"]]],
 ];
 const EA = {
+  Goku: { sk: "#e8b98a", out: "#e87516", h: "#111", sp: 1, lg: 1 },
+  "King Gomah": { sk: "#c98d7a", out: "#4d294d", h: "#7c342d", hor: 1 },
+  "Tamagami Number One": { sk: "#d4bd9a", out: "#b7a16a", bald: 1, hor: 1 },
+  "Tamagami Number Two": { sk: "#b5c4d8", out: "#48556c", bald: 1, hor: 1 },
+  "Tamagami Number Three": { sk: "#9bc9a1", out: "#496a53", bald: 1, hor: 1 },
+  "Majin Kuu": { sk: "#d4a6cf", out: "#6c3974", ant: 1 },
+  "General Rilldo": { sk: "#8c9eaa", out: "#4d6578", h: "#c6b7a1" },
+  Baby: { sk: "#d8c6b0", out: "#9a2630", h: "#d8d8d8" },
+  "Super 17": { sk: "#d4c6a0", out: "#252525", h: "#111", lg: 1 },
+  "Syn Shenron": { sk: "#8d9b9b", out: "#3c4548", hor: 1, bald: 1 },
+  "Eis Shenron": { sk: "#9bd4e8", out: "#d8f0ff", hor: 1, bald: 1 },
   Raditz: { sk: "#e8b98a", out: "#3a3a4a", h: "#111", sp: 1, lg: 1 },
   Nappa: { sk: "#e8b98a", out: "#5a4a3a", s: 1.35, bald: 1 },
   Vegeta: { sk: "#e8b98a", out: "#2c3e90", h: "#111", sp: 1 },
@@ -310,9 +341,29 @@ const EFL = {
     "Max Output": { a: "#bfe3ff" },
   },
   FK = { "2nd Form": 0, "3rd Form": 1, "Final Form": 2, "100% Full Power": 5, "Final Form Cooler": 2 };
-const EN = ED.map((e) => e[0]),
-  BOSS = [2, 7, 17, 21, 26, 30, 35],
-  SEC = 36;
+const CAMPAIGNS = {
+  "DBZ": { ids: [...Array(9).keys(), ...Array.from({length:4},(_,i)=>i+12), ...Array.from({length:5},(_,i)=>i+17)], note: "Dragon Ball Z saga progression" },
+  "Super": { ids: Array.from({length:9},(_,i)=>i+26), note: "Dragon Ball Super era; later manga-era opponents are included as optional encounters" },
+  "Movies": { ids: [9,10,11,16,22,23,24,25], note: "Movie-only villains; kept separate from the main story" },
+  "Daima": { ids: [37,38,39,40,41], note: "Dragon Ball Daima continuity" },
+  "GT": { ids: [42,43,44,45,46], note: "Dragon Ball GT continuity" },
+};
+let EN = [];
+let campaignIds = [];
+const SEC = 36;
+const BOSS = [2, 7, 17, 21, 26, 30, 35, 9, 11, 24, 25, 37, 41, 43, 44, 45, 46];
+function setCampaign(name) {
+  if (!CAMPAIGNS[name]) return;
+  P.campaign = name;
+  P.progress = P.progress || {};
+  P.progress[name] = P.progress[name] ?? (name === "DBZ" ? (P.fights || 0) : 0);
+  P.fights = P.progress[name];
+  campaignIds = CAMPAIGNS[name].ids.slice();
+  EN = campaignIds.map(id => ED[id][0]);
+  P.eb = P.eb || {};
+  save();
+}
+
 const NM = {
   str: "Strength",
   spd: "Speed",
@@ -333,6 +384,7 @@ const MASH =
   "<b>Mastery</b>: each hit, block or dodge gives your equipped style XP. Every level (0-10) adds 15% of the style bonus (up to 2.5x). Forms gain XP while active; each level cuts that form's ki drain 5% (max -50%).<br><b>Stun</b>: a hit may stun based on attacker Str vs defender Dur (short immunity after a stun).<br><b>Injuries/status</b>: big hits can sever an arm (half attack speed), sever a leg (slower, smaller dodge) or crack ribs (less stamina); you will see the wounds and the severed limbs. Bleed, burn, weaken and dizzy last a few seconds. Namekians regrow limbs.<br><b>Balance</b>: after each fight, stats below a fraction of your top stat catch up (set in Config).<br><b>Dodge</b> costs almost nothing and adds no fatigue.";
 const COL = ["#3aa0ff", "#ff4fa3", "#9b59ff", "#2ee6a6", "#ff8c1a", "#ffffff", "#ff3b3b"];
 let P, cfg, F;
+let SANDBOX = null, SANDBOX_SNAPSHOT = null;
 // ============================================================
 // TYPES (Warrior...) and BLOODLINES (GENE). Add new ones here + applyGene() + the pool in newGame()
 // ============================================================
@@ -400,13 +452,14 @@ const GENE = {
     f: ["Legendary Super Saiyan", 6, 0.8, 600, "#7dff4a"],
   },
 };
-const FL = () =>
-    (P.race === "Alien" ? P.alien.f : FORMS[P.race]).concat(
-      GENE[P.gene] && GENE[P.gene].f ? [GENE[P.gene].f] : [],
-    ),
+const FL = () => {
+  let base = P.race === "Bio-Android" ? [] : P.race === "Alien" ? P.alien.f : FORMS[P.race];
+  if (P.race === "Human" && P.gene === "Hulk") base = FORMS.Human.filter(f => /^Kaioken/.test(f[0]));
+  return base.concat(GENE[P.gene] && GENE[P.gene].f ? [GENE[P.gene].f] : []);
+},
   fmOf = (i) => {
     const f = FL()[i];
-    return f[3] || cfg.fm[P.race][i];
+    return f[3] || (cfg.fm[P.race] || [])[i] || 1;
   },
   FCc = (i) =>
     FL()[i][4] ||
@@ -495,10 +548,10 @@ const snd = (f, d, ty, sl, v) => {
   } catch (e) {}
 };
 const SFX = {
-  hit: () => snd(180, 0.12, "square", 40),
+  hit: () => { snd(180, 0.12, "square", 40); snd(720,0.045,"triangle",260,0.08); },
   blk: () => snd(350, 0.08, "triangle", 180),
   dodge: () => snd(500, 0.18, "sine", 1800),
-  ki: () => snd(900, 0.3, "sawtooth", 150),
+  ki: () => { snd(900, 0.3, "sawtooth", 150); setTimeout(() => snd(520,0.18,"triangle",110,0.12),70); },
   warn: () => snd(260, 0.1, "square", 200, 0.12),
   form: () => {
     snd(80, 1, "sawtooth", 1000, 0.25);
@@ -521,11 +574,15 @@ function fx(x, y, col, n, up) {
 }
 function bg() {
   const g = c.createLinearGradient(0, 0, 0, 185),
-    s = F.i >= 26 ? ["#2a0a4a", "#c04a8a"] : F.i >= 12 ? ["#6a1b1b", "#ff9a3c"] : ["#1e5fd0", "#ffc070"];
+    palette = { Super:["#17264f","#b06a9e"], Movies:["#321b55","#df8b46"], Daima:["#38245f","#d28eab"], GT:["#6a241b","#e5a34e"], DBZ:["#1e5fd0","#ffc070"] },
+    s = palette[P.campaign] || ["#1e5fd0","#ffc070"];
   g.addColorStop(0, s[0]);
   g.addColorStop(1, s[1]);
   c.fillStyle = g;
   c.fillRect(0, 0, 360, 200);
+  // Distant clouds, mountain ridges and a low skyline give each campaign a layered arena.
+  c.fillStyle = "#ffffff24";
+  [[38,34,20],[112,48,15],[252,29,24]].forEach(([x,y,r]) => { c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.arc(x+r,y+3,r*.72,0,Math.PI*2); c.fill(); });
   c.fillStyle = "#0004";
   [
     [0, 50, 120, 95],
@@ -538,6 +595,8 @@ function bg() {
     c.lineTo(m[2], 185);
     c.fill();
   });
+  c.fillStyle = "#17223888";
+  [[8,151,18,34],[31,142,22,43],[59,157,16,28],[235,147,19,38],[263,155,14,30],[284,139,20,46]].forEach(([x,y,w,h])=>{c.fillRect(x,y,w,h);c.fillStyle="#ffd98a55";for(let wy=y+6;wy<y+h-3;wy+=10)c.fillRect(x+5,wy,3,4);c.fillStyle="#17223888";});
   c.fillStyle = "#6b4120";
   c.fillRect(0, 185, 360, 15);
   c.fillStyle = "#4a2c14";
@@ -624,7 +683,28 @@ function ngc(b) {
 }
 function news() {
   ov(
-    `<h2>Changelog</h2><div class="mu"><b>v5.2</b>: FIXED the freeze after beating Vegeta (and every 3rd fight): the Alien build-evolution code ran for every race and crashed before saving. Story characters now look like themselves (Raditz long spiky hair, Nappa bald brute, Vegeta flame hair, Dodoria pink spikes, Zarbon green hair, Frieza/Cooler/King Cold horned frost bodies with real forms, Cell with spots, crest and wings, Buu with antenna, Hit, Jiren, Zeno, etc.). Enemy forms now make sense: characters who do not transform just release "Full Power" (white aura, no hair change); Vegeta becomes a Great Ape, Frieza goes 2nd/3rd/Final/100%, Cell Semi-Perfect/Perfect/Super Perfect, Super Buu absorbs Gotenks then Gohan, Broly goes Legendary Super Saiyan.<br><b>v5</b>: Injuries are now visible: severed arms and legs fly off and stay on the ground in a pool of blood, stumps and cracked ribs show on the body, bleeding drips blood (works for you and enemies; Namekians regrow limbs). Aliens now have ONE customizable form (name, body and form colors in Config) whose power grows with your wins, and every 3 wins your build (highest stat) evolves a new trait (Strength: claws/arms, Speed: wings/tail, Durability: carapace/regen, Ki: third eye/stinger...). New alien bloodlines: one per Ginyu Force member: Captain Ginyu (Body Change, fast pose recovery), Guldo (Time Freeze), Recoome (Eraser Gun), Burter (Blue Hurricane speed burst), Jeice (Crusher Ball); plus Hit (look, free time-skip dodges, dazing hits), Zarbon (speed, Monstrous Zarbon form) and Dodoria (brute, strong ki blasts, Rampage form). Namekian forms are now Giant, Super Namekian, Potential Unleashed (yellow) and Orange.<br><b>v4</b>: show-accurate forms, Frost Demon and Alien races, Hanma bloodline, Pseudo Ultra Instinct, statuses, stun, Technique Creator, stat balancing, style mechanics, animated hands, Saitama phases.<br><b>v3</b>: 36 foes + Saitama, styles and mastery. <b>v2</b>: DBZ look, sound, genetics. <b>v1</b>: first build.</div><h2>Dragon Ball news (Jan 2026)</h2><div class="mu">• At the 40th-anniversary Genkidamatsuri event (Jan 25, 2026), Toei announced Dragon Ball Super: The Galactic Patrol, adapting the Galactic Patrol Prisoner arc.<br>• Dragon Ball Super: Beerus, an enhanced redo of the Super anime, is set for Japanese TV in fall 2026.<br>• A new game, AGE1000, and more Sparking! ZERO DLC were announced.<br>• Dragon Ball Daima finished in 2025; the latest film is Super Hero (2022).<br>• Multipliers are approximate; edit them in Config.</div>`,
+    `<h2>Changelog</h2><div class="mu">
+      <b>v7.0 — Combat depth & sandbox</b><br>
+      • Added fight recovery and Escape-to-menu. Invalid enemy states are caught by the frame loop so a broken fight can return safely to the menu.<br>
+      • Permanent stat growth is now effort-based: attacks, defense, counters, dodges and engaged combat time contribute. One-hit wins grant very little; replaying cleared missions grants only 12% of normal growth and cannot repeat balancing/evolution rewards.<br>
+      • Zenkai is a temporary in-fight surge, not a permanent stat multiplier. Form mastery is earned through actions rather than idle time.<br>
+      • Added left/right movement, physical/ki range, momentum, timed perfect guards, punish windows, slightly stronger baseline attacks, directional knockback and destructible building scenery with debris. Burn now deals damage over time.<br>
+      • Legendary Super Saiyan and Gamma Rage ramp up only while active in a fight and reset afterward. Human Hulk uses Kaioken plus Gamma Rage as its only form path.<br>
+      • Added Training Sandbox for testing enemies, races, genes, forms and stats without awarding campaign progress or permanent growth.<br>
+      <b>v6.0 — Continuity & Bio-Android update</b><br>
+      • Split progression into five independent campaigns: DBZ, Super, Movies, Daima and GT. Each campaign keeps its own encounter list, win count and enemy-power cache.<br>
+      • Added Bio-Android as a playable race. It evolves through Imperfect, Semi-Perfect, Perfect, Super Perfect and Ultimate stages instead of using transformations. Evolution requires campaign wins and 25% ki; stages grant configurable battle multipliers, gradual regeneration and ki recovery, plus ki absorption on hits.<br>
+      • Added Daima and GT opponents to the roster, and separated movie villains from the main story path.<br>
+      • Added character-specific silhouette and costume cues for signature fighters, including Vegeta, Frieza, Cell, Beerus, Hit, Broly, Zamasu and others. These are original procedural canvas drawings, not official character sprites.<br>
+      • Improved arena atmosphere, menu transitions, button polish, impact sounds and layered ki cues.<br>
+      • Split the game into one source of truth: index.html now loads style.css and game.js instead of carrying a second embedded copy.<br>
+      <b>Power-scaling note</b><br>
+      Campaign multipliers are gameplay balancing values, not official numeric power levels. The project does not contain a verified canonical tier list; use Config to tune difficulty without treating these numbers as canon.<br>
+      <b>Known limitation</b><br>
+      Character art is still procedurally drawn with canvas primitives. It is more recognizable than the old generic silhouettes, but it is not a frame-by-frame anime sprite set. Sound effects are synthesized locally; external soundboard audio has not been copied into the game.<br>
+      <b>Previous systems retained</b><br>
+      Stats, types, genetics, techniques, styles, mastery, stamina, fatigue, ki, blocking, dodge timing, enemy growth, local saves, Config and the return-to-menu results flow remain part of the project.
+    </div>`,
   );
 }
 const bp = (s) => Object.values(s).reduce((a, b) => a + b, 0);
@@ -651,9 +731,9 @@ function load() {
         cfg.enemyGrow = DEF.enemyGrow;
       }
       for (const r in DEF.fm) cfg.fm[r] = DEF.fm[r].map((v, i) => (cfg.fm[r] || [])[i] || v);
-      if (P.v !== 4) {
-        P.v = 4;
-        P.eb = [];
+      if ((P.v || 0) < 6) {
+        P.v = 6;
+        P.eb = {};
         P.mas = P.mas || {};
         P.fmas = P.fmas || {};
         P.style = P.style || "Turtle School";
@@ -664,8 +744,8 @@ function load() {
         P.fc = { g: ["#ffd84a", "#ff8a00"], b: ["#15151c", "#ff2d2d"] };
       }
       if (P.gene === "Ginyu Force") P.gene = "Captain Ginyu";
-      if (P.v === 4) {
-        P.v = 5;
+      if ((P.v || 0) === 4) {
+        P.v = 6;
         if (P.race === "Alien") {
           const a = P.alien,
             pal = ["#ff4fa3", "#2ee6a6", "#9b59ff", "#ffb020", "#ff3b3b", "#3aa0ff"];
@@ -674,6 +754,12 @@ function load() {
           a.f = [["Ascended Form", 1, 0.9, 8, a.fc]];
         }
       }
+      P.bioStage = P.bioStage || 0;
+      P.progress = P.progress || { DBZ: P.fights || 0, Super: 0, Movies: 0, Daima: 0, GT: 0 };
+      P.campaign = CAMPAIGNS[P.campaign] ? P.campaign : "DBZ";
+      P.eb = P.eb && !Array.isArray(P.eb) ? P.eb : {};
+      P.v = 6;
+      setCampaign(P.campaign);
       return;
     }
   } catch (e) {}
@@ -681,19 +767,23 @@ function load() {
   newGame();
 }
 function newGame() {
-  const r = rnd(["Saiyan", "Namekian", "Human", "Frost Demon", "Alien"]),
+  const r = rnd(["Saiyan", "Namekian", "Human", "Frost Demon", "Alien", "Bio-Android"]),
     B =
       {
         Saiyan: [32, 25, 22, 24, 22, 20],
         Namekian: [24, 22, 30, 26, 28, 22],
         Human: [22, 26, 20, 24, 24, 34],
         "Frost Demon": [26, 28, 20, 24, 34, 22],
+        "Bio-Android": [30, 28, 32, 30, 30, 26],
       }[r] || Array.from({ length: 6 }, () => 20 + Math.random() * 14),
     k = Object.keys(NM);
   const st = {};
   k.forEach((x, i) => (st[x] = B[i] * (0.9 + Math.random() * 0.2)));
   P = {
     race: r,
+    bioStage: 0,
+    campaign: "DBZ",
+    progress: { DBZ: 0, Super: 0, Movies: 0, Daima: 0, GT: 0 },
     st,
     color: rnd(COL),
     hair: rnd(["#111", "#5a3a1a", "#c0392b", "#e8e8e8", "#2c3e90"]),
@@ -701,8 +791,8 @@ function newGame() {
     skin: rnd(["#f1c27d", "#c68642", "#ffdbac"]),
     techs: [null, null],
     fights: 0,
-    eb: [],
-    v: 5,
+    eb: {},
+    v: 6,
     mas: {},
     fmas: {},
     fc: { g: ["#ffd84a", "#ff8a00"], b: ["#15151c", "#ff2d2d"] },
@@ -732,19 +822,71 @@ function newGame() {
   P.style = rnd(["Turtle School", "Crane School", "Saiyan Pride"]);
   P.styles = [P.style];
   applyGene();
+  setCampaign(P.campaign || "DBZ");
   save();
 }
 // ---------- UI ----------
 // ============================================================
 // MENUS: screens are built as HTML strings and styled by style.css
 // ============================================================
+function selectCampaign(name) { setCampaign(name); menu(); }
+
+function sandbox() {
+  if (!SANDBOX_SNAPSHOT) SANDBOX_SNAPSHOT = structuredClone(P);
+  const races = ["Saiyan","Namekian","Human","Frost Demon","Alien","Bio-Android"];
+  const enemies = EN.map((n,i)=>`<option value="${i}">${n}</option>`).join("");
+  ov(`<h2>Training Sandbox</h2><p class="mu">No campaign progress, unlocks, or permanent stat gains are awarded here. Your real character is restored when you exit.</p>
+    <label>Enemy<select id="sbEnemy">${enemies}</select></label>
+    <label>Race<select id="sbRace" onchange="refreshSandboxForms()">${races.map(r=>`<option ${r===P.race?"selected":""}>${r}</option>`).join("")}</select></label>
+    <label>Bloodline<select id="sbGene" onchange="refreshSandboxForms()">${Object.keys(GENE).map(g=>`<option ${g===P.gene?"selected":""}>${g}</option>`).join("")}</select></label>
+    <label>Starting form<select id="sbForm"><option value="-1">Base</option>${FL().map((f,i)=>`<option value="${i}">${f[0]} ×${fmOf(i)}</option>`).join("")}</select></label>
+    <label>Bio-Android stage<select id="sbBioStage">${BIO_STAGES.map((b,i)=>`<option value="${i}" ${i===(P.bioStage||0)?"selected":""}>${b.name}</option>`).join("")}</select></label>
+    <h3>Test stats</h3>${Object.keys(NM).map(k=>`<label>${NM[k]}<input id="sb_${k}" type="number" min="1" max="1000000000" value="${Math.round(P.st[k])}"></label>`).join("")}
+    <button class="big" onclick="launchSandbox()">Spawn enemy & test</button><button class="big alt" onclick="exitSandbox()">Exit sandbox</button>`);
+}
+function refreshSandboxForms() {
+  if (!$("sbRace")) return;
+  const race = P.race, gene = P.gene;
+  P.race = $("sbRace").value; P.gene = $("sbGene").value;
+  if (P.race === "Alien" && !P.alien) P.alien = genAlien();
+  const forms = FL();
+  $("sbForm").innerHTML = '<option value="-1">Base</option>' + forms.map((f,i)=>`<option value="${i}">${f[0]} ×${f[3] || (cfg.fm[P.race] || [])[i] || 1}</option>`).join("");
+  P.race = race; P.gene = gene;
+}
+function launchSandbox() {
+  if (!SANDBOX_SNAPSHOT) SANDBOX_SNAPSHOT = structuredClone(P);
+  const base = structuredClone(SANDBOX_SNAPSHOT);
+  P = base;
+  P.race = $("sbRace").value; P.gene = $("sbGene").value;
+  if (P.race === "Alien" && !P.alien) P.alien = genAlien();
+  if (P.race === "Bio-Android") P.bioStage = +$("sbBioStage").value || 0;
+  Object.keys(NM).forEach(k => P.st[k] = clamp(+$("sb_"+k).value || 1, 1, 1e9));
+  SANDBOX = { form: +$("sbForm").value };
+  const enemy = +$("sbEnemy").value;
+  startFight(enemy);
+}
+function sandboxReturn() { if (!SANDBOX) return; sandbox(); }
+function exitSandbox() {
+  if (SANDBOX_SNAPSHOT) P = SANDBOX_SNAPSHOT;
+  SANDBOX = null; SANDBOX_SNAPSHOT = null;
+  save(); menu();
+}
+
+function recoverGame() {
+  if (SANDBOX) { exitSandbox(); return; }
+  F = null;
+  $("game").hidden = true;
+  $("ov").hidden = true;
+  $("menu").hidden = false;
+  menu();
+}
 function menu() {
   $("game").hidden = true;
   $("ov").hidden = true;
   const m = $("menu");
   m.hidden = false;
-  const n = Math.min(P.fights, 35);
-  m.innerHTML = `<h1>Ki Fist: Limitless Saga</h1><div class="card"><span class="badge pri">${P.race}</span><span class="badge">${P.type}</span>${P.gene !== "None" ? `<span class="badge">${P.gene}</span>` : ""}<div style="font-size:24px;font-weight:600">${fmt(bp(P.st))} <span class="mu">power</span></div><br><span class="mu">Techniques: ${P.techs.map((t) => (t ? (t === "Tri-Beam" ? t : t.n) : "empty")).join(", ")}${P.race === "Alien" ? " · Traits: " + P.alien.tr.join(", ") : ""}</span><p class="mu">${PAS[P.race]}</p><p class="mu">${TYPES[P.type].d}</p><p class="mu">${GENE[P.gene].d}</p><div class="mu">Progress: ${Math.min(P.fights, 36)}/36 fights won</div></div>
+  const n = Math.min(P.fights, EN.length - 1);
+  m.innerHTML = `<h1>Ki Fist: Limitless Saga</h1><div class="card"><label>Story continuity <select id="campaign" onchange="selectCampaign(this.value)">${Object.keys(CAMPAIGNS).map(k=>`<option value="${k}" ${P.campaign===k?"selected":""}>${k}</option>`).join("")}</select></label><p class="mu">${CAMPAIGNS[P.campaign].note} · ${EN.length} encounters · ${P.fights}/${EN.length} cleared</p><span class="badge pri">${P.race}</span><span class="badge">${P.race === "Bio-Android" ? BIO_STAGES[P.bioStage || 0].name : P.type}</span><span class="badge">${P.type}</span>${P.gene !== "None" ? `<span class="badge">${P.gene}</span>` : ""}<div style="font-size:24px;font-weight:600">${fmt(bp(P.st))} <span class="mu">power</span></div><br><span class="mu">Techniques: ${P.techs.map((t) => (t ? (t === "Tri-Beam" ? t : t.n) : "empty")).join(", ")}${P.race === "Alien" ? " · Traits: " + P.alien.tr.join(", ") : P.race === "Bio-Android" ? " · Evolution: " + BIO_STAGES[P.bioStage || 0].name : ""}</span><p class="mu">${PAS[P.race]}</p><p class="mu">${TYPES[P.type].d}</p><p class="mu">${GENE[P.gene].d}</p><div class="mu">Progress: ${Math.min(P.fights, EN.length)}/${EN.length} fights won</div></div>
 <button class="big" onclick="startFight(${n})">Fight ${n + 1}: ${EN[n]}</button>${
     P.fights > 1
       ? `<label>Replay fight <select id="rp" onchange="startFight(+this.value)"><option>choose…</option>${EN.slice(
@@ -755,7 +897,7 @@ function menu() {
           .join("")}</select></label>`
       : ""
   }
-${P.gene === "Hulk" && P.fights >= 36 ? `<button class="big alt" onclick="startFight(36)">??? Secret Challenger</button>` : ""}<button class="big alt" onclick="techs()">Technique Creator</button><button class="big alt" onclick="styles()">Style: ${P.style}</button><button class="big alt" onclick="news()">News & Changelog</button><button class="big alt" onclick="stats()">Stats & Forms</button><button class="big alt" onclick="config()">Config & Claude</button><button class="big alt" onclick="ngc(this)">New Random Fighter</button>`;
+${P.gene === "Hulk" && P.campaign === "DBZ" && P.fights >= EN.length ? `<button class="big alt" onclick="startFight(36)">??? Secret Challenger</button>` : ""}<button class="big alt" onclick="sandbox()">Training Sandbox</button><button class="big alt" onclick="recoverGame()">Recover / Reset Fight</button><button class="big alt" onclick="techs()">Technique Creator</button><button class="big alt" onclick="styles()">Style: ${P.style}</button><button class="big alt" onclick="news()">News & Changelog</button><button class="big alt" onclick="stats()">Stats & Forms</button><button class="big alt" onclick="config()">Config & Claude</button><button class="big alt" onclick="ngc(this)">New Random Fighter</button>`;
 }
 function ov(h, x) {
   const o = $("ov");
@@ -799,13 +941,14 @@ function stats() {
             `<div class="r"><b>${NM[k]}</b><span>${fmt(P.st[k])}</span><div class="bar" style="grid-column:1/3"><i style="width:${clamp((L10(P.st[k]) / 12) * 100, 3, 100)}%"></i></div><small style="grid-column:1/3">${DS[k]}</small></div>`,
         )
         .join("") +
-      `<div class="mu">Dodge window: ${(dodgeWin({ ma: P.st.ma, spd: 1 }, { spd: 1 }) * 1000) | 0} ms (at equal speed)</div><h2>Forms</h2>` +
+      `<div class="mu">Dodge window: ${(dodgeWin({ ma: P.st.ma, spd: 1 }, { spd: 1 }) * 1000) | 0} ms (at equal speed)</div><h2>${P.race === "Bio-Android" ? "Evolution" : "Forms"}</h2>` +
+      (P.race === "Bio-Android" ? BIO_STAGES.map((b,i)=>`<div class="${(P.bioStage||0)>=i?"":"lock"}">${b.name} — ×${(cfg.bio || DEF.bio)[i]} · ${b.desc} ${(P.bioStage||0)>=i?"✔":"(requires "+b.wins+" wins)"}</div>`).join("") :
       fs
         .map(
           (f, i) =>
             `<div class="${P.fights >= f[1] ? "" : "lock"}">${f[0]} — ×${fmOf(i)} · Mastery Lv${lv(P.fmas[f[0]], 20)} ${P.fights >= f[1] ? "✔" : "(unlock: win " + f[1] + " fights)"}</div>`,
         )
-        .join("") +
+        .join("")) +
       `<p class="mu">${PAS[P.race]}</p><p class="mu">${TYPES[P.type].d}</p><p class="mu">${GENE[P.gene].d}</p>${P.race === "Alien" ? `<p class="mu">Alien traits: ${P.alien.tr.map((t) => t + " (" + ALN[t] + ")").join("; ")}${P.alien.tr.includes("Extra Arms") ? " - " + P.alien.arms + " arms" : ""}</p>` : ""}<h2>How it works</h2><div class="mu">${MASH}</div>`,
   );
 }
@@ -821,7 +964,7 @@ function config() {
       (f, i) =>
         (h += `<label>${r}: ${f[0]}<input type=number step=any data-r="${r}" data-i="${i}" value="${cfg.fm[r][i]}"></label>`),
     );
-  h += `<label>Genetic<select id="gs">${Object.keys(GENE)
+  h += `<h2>Bio-Android evolution multipliers</h2>` + BIO_STAGES.map((b,i)=>`<label>${b.name}<input type=number min=0.1 step=any data-bio="${i}" value="${(cfg.bio || DEF.bio)[i]}"></label>`).join("") + `<label>Genetic<select id="gs">${Object.keys(GENE)
     .map((g) => `<option ${g === P.gene ? "selected" : ""}>${g}</option>`)
     .join(
       "",
@@ -855,6 +998,12 @@ $("ov").addEventListener("change", (e) => {
       a.fc = t.value;
       a.f[0][4] = t.value;
     }
+    save();
+    return;
+  }
+  if (t.dataset.bio !== undefined && v > 0) {
+    cfg.bio = cfg.bio || DEF.bio.slice();
+    cfg.bio[+t.dataset.bio] = v;
     save();
     return;
   }
@@ -1118,9 +1267,12 @@ const LK = (n) =>
                                         ? { a: "#b04bff", h: "#c07bff" }
                                         : {};
 const pf = () => {
+  if (P.race === "Bio-Android") return { fm: (cfg.bio || DEF.bio)[P.bioStage || 0], sm: Math.sqrt((cfg.bio || DEF.bio)[P.bioStage || 0]) };
   if (F.form < 0) return { fm: 1, sm: 1 };
-  const d = FL()[F.form],
-    fm = fmOf(F.form);
+  const d = FL()[F.form];
+  let fm = fmOf(F.form);
+  const rampForm = (P.gene === "Legendary Saiyan" && /Legendary/.test(d[0])) || (P.gene === "Hulk" && /Gamma Rage/.test(d[0]));
+  if (rampForm) fm *= F.ramp || 1;
   return { fm, sm: d[2] || Math.pow(fm, 0.6) };
 };
 const pe = () => {
@@ -1161,22 +1313,27 @@ const rand = (a, b) => a + Math.random() * (b - a);
 // ============================================================
 function startFight(i) {
   i = +i;
-  if (isNaN(i)) return;
-  const boss = BOSS.includes(i);
+  if (!P || !P.st || !cfg) { load(); }
+  if (!Array.isArray(EN) || !EN.length) setCampaign(P.campaign || "DBZ");
+  if (isNaN(i) || !EN[i] && i !== SEC) { recoverGame(); return; }
+  const eid = i === SEC ? SEC : campaignIds[i];
+  if (eid === undefined || !ED[eid]) { recoverGame(); return; }
+  const boss = BOSS.includes(eid);
   let bf = 1;
   FL().forEach((f, j) => {
     if (P.fights >= f[1]) bf = Math.max(bf, fmOf(j));
   });
-  if (!P.eb[i])
-    P.eb[i] =
-      bp(P.st) * cfg.enemyScale * (1 + 0.3 * i) * Math.pow(bf, 0.8) * (boss ? 1.5 : 1) * (i === SEC ? 2 : 1);
-  const eb = P.eb[i],
+  const ebKey = P.campaign + ":" + i;
+  P.eb = P.eb || {};
+  const campaignTier = { DBZ: 1, Movies: 1.25, Super: 4, Daima: 1.6, GT: 2.6 }[P.campaign] || 1;
+  if (!P.eb[ebKey]) P.eb[ebKey] = bp(P.st) * cfg.enemyScale * campaignTier * (1 + 0.3 * i) * Math.pow(bf, 0.8) * (boss ? 1.5 : 1) * (eid === SEC ? 2 : 1);
+  const eb = P.eb[ebKey],
     sh = { str: 0.2, dur: 0.2, spd: 0.15, sta: 0.18, kic: 0.14, ma: 0.13 },
     st = {};
   for (const k in sh) st[k] = eb * sh[k] * (0.85 + Math.random() * 0.3);
-  const cf = ED[i][2],
+  const cf = ED[eid][2],
     forms =
-      i === SEC
+      eid === SEC
         ? [{ at: 0.5, m: 8, n: "SERIOUS MODE" }]
         : cf
           ? cf.map((x) => ({ at: x[0], m: x[1], n: x[2] }))
@@ -1189,10 +1346,11 @@ function startFight(i) {
             : [{ at: 0.5, m: 2.5, n: "Full Power" }];
   F = {
     i,
+    eid,
     t: 0,
     over: false,
     e: {
-      n: EN[i],
+      n: ED[eid][0],
       st,
       fm: 1,
       fi: -1,
@@ -1206,15 +1364,19 @@ function startFight(i) {
       type: "melee",
       lunge: 0,
       flash: 0,
-      ng: i === SEC,
-      hold: i === SEC,
+      ng: eid === SEC,
+      hold: eid === SEC,
       sx: { bleed: 0, burn: 0, weak: 0, dizzy: 0 },
       inj: {},
       injT: 0,
-      col: (EA[ED[i][0]] || {}).sk || ED[i][1],
+      col: (EA[ED[eid][0]] || {}).sk || ED[eid][1],
     },
     hp: 1,
     ki: 100,
+    px: 90, ex: 270, facing: 1, ramp: 1, perfectGuard: 0,
+    effort: { actions: 0, blocks: 0, parries: 0, dodges: 0, dealt: 0, taken: 0, active: 0 },
+    debris: [], buildingDamage: 0, sandbox: !!SANDBOX,
+    wasCleared: P.fights > i,
     sta: 100,
     fat: 0,
     form: -1,
@@ -1260,6 +1422,7 @@ function startFight(i) {
     flash: 0,
     ob: bp(P.st),
   };
+  if (SANDBOX && SANDBOX.form >= 0 && SANDBOX.form < FL().length) F.form = SANDBOX.form;
   $("menu").hidden = true;
   $("ov").hidden = true;
   $("game").hidden = false;
@@ -1276,8 +1439,9 @@ function say(s, c, side) {
 }
 function gain(s, w) {
   P.mas[P.style] = (P.mas[P.style] || 0) + 1;
-  P.st[s] *= 1 + cfg.inFight * (w || 1) * (P.race === "Human" && s === "ma" ? 1.25 : 1);
-  F.u[s]++;
+  if (F.form >= 0) { const formName = FL()[F.form][0]; P.fmas[formName] = (P.fmas[formName] || 0) + 0.12; }
+  F.u[s] += Math.max(0.25, w || 1);
+  if (F.effort) F.effort.actions += 0.25;
 }
 function egrow() {
   if (F.e.ng) return;
@@ -1314,7 +1478,11 @@ function atk(m) {
   if (!m || !F || F.over || F.act > 0 || F.stun > 0 || F.exh > 0) return;
   const A = pe(),
     E = ee(),
-    e = F.e,
+    e = F.e;
+  const distance = Math.abs(F.ex - F.px);
+  const maxRange = m.k === "ki" ? 285 : (m.id === "heavy" ? 122 : 108);
+  if (distance > maxRange) { say("Out of range — close the gap", "#ffd84a"); return; }
+  
     sf = sfac(),
     kf = kfac() * (m.tech && P.race === "Human" ? 0.9 : 1),
     sc = (m.sta || 0) * sf * (F.inj.ribs ? 1.3 : 1),
@@ -1337,7 +1505,9 @@ function atk(m) {
     sb("fat") *
     (P.gene === "Legendary Saiyan" ? 1.25 : 1) *
     (0.5 + 0.5 * sf * 1.1);
+  F.effort.actions += 1;
   F.combo = F.t - F.lastAct < 2 ? F.combo + 1 : 1;
+  F.momentum = Math.min(100, (F.momentum || 0) + 7 + Math.min(6, F.combo));
   F.lastAct = F.t;
   F.act =
     m.lock *
@@ -1359,11 +1529,12 @@ function atk(m) {
     blitz = r >= (P.type === "Speedster" ? 1.6 : 2),
     cl = has("Claws") && m.k === "phys";
   let d =
-      (m.k === "ki" ? A.kic * 0.6 : A.str * 0.5) *
+      (m.k === "ki" ? A.kic * 0.65 : A.str * 0.55) *
       m.m *
+      1.08 *
       cfg.dmgP *
       (0.9 + Math.random() * 0.2) *
-      (1 - F.fat / 150),
+      (1 - F.fat / 150) * (1 + Math.min(0.35, (F.momentum || 0) / 100 * 0.35)),
     tag = "";
   if (P.race === "Saiyan") d *= 1 + 0.5 * (1 - F.hp);
   if (F.rage > 0) d *= 2;
@@ -1412,7 +1583,18 @@ function atk(m) {
     e.si = m.s + 2;
   }
   const fr = d / (E.dur * 10);
+  F.effort.dealt += Math.min(1, fr);
   e.hp -= fr;
+  const push = clamp(8 + d / Math.max(1, E.dur) * 1.4, 8, m.k === "ki" ? 48 : 34);
+  const pushDir = Math.sign(F.ex - F.px) || 1;
+  F.ex = clamp(F.ex + pushDir * push, 28, 332);
+  if (F.ex >= 326 || F.ex <= 34) {
+    F.buildingDamage = Math.min(1, F.buildingDamage + push / 120);
+    F.shake = Math.max(F.shake, 9 + F.buildingDamage * 12);
+    for (let z=0; z<7; z++) F.debris.push({x: F.ex-pushDir*rand(0,24), y: rand(110,178), vx: -pushDir*rand(25,95), vy: rand(-125,-25), l: rand(.5,1.2), c: rnd(["#a9a39b","#756f68","#c8bca7"]) });
+    say("BUILDING IMPACT!", "#ffb35c", 1);
+  }
+  if (P.race === "Bio-Android") F.ki = Math.min(100, F.ki + (m.k === "ki" ? 1.2 : 2.2) * (1 + 0.12 * (P.bioStage || 0)));
   e.flash = 1;
   fx(270, 120, m.k === "ki" ? P.color : "#fff", m.k === "ki" ? 14 : 8);
   F.shake = m.k === "ki" ? 10 : 5;
@@ -1421,7 +1603,7 @@ function atk(m) {
   egrow();
   say(tag + fmt(d), m.k === "ki" ? P.color : "#fff", 1);
   if (m.bl && Math.random() < 0.6) addSx(e, "bleed", 6);
-  if (m.bn) addSx(e, "burn", 5);
+  if (m.bn || (m.k === "ki" && /Wave|Beam|blast|Kamehameha|Final Flash/i.test(m.id + " " + (m.n || "")) && Math.random() < 0.38)) addSx(e, "burn", m.bn ? 7 : 3.5);
   if (cl && Math.random() < 0.3) addSx(e, "bleed", 5);
   if (has("Stinger") && Math.random() < 0.25) addSx(e, "weak", 5);
   injure(e, fr, false);
@@ -1468,19 +1650,32 @@ function hurt(kind, mul) {
       (e.inj.arm && kind !== "ki" ? 0.6 : 1),
     t = "",
     bl = false;
+  const parry = F.blk && F.perfectGuard > 0;
   if (F.blk && F.sta > 8) {
-    d *= kind === "ki" ? 0.6 : 0.3;
+    d *= parry ? 0 : kind === "ki" ? 0.6 : 0.3;
     F.sta -= 14 * sfac() * (F.inj.ribs ? 1.5 : 1);
     gain("ma", 0.8);
     gain("dur", 0.6);
-    t = "BLOCK ";
+    t = parry ? "PERFECT PARRY " : "BLOCK ";
     bl = true;
     F.bflash = 1;
+    F.effort.blocks++;
+    if (parry) {
+      F.effort.parries++;
+      F.counter = 2.2;
+      F.momentum = Math.min(100, (F.momentum || 0) + 22);
+      e.stun = Math.max(e.stun, 1.15);
+      e.state = "idle"; e.t = 1.1; e.si = 2.5;
+      F.ex = clamp(F.ex + 18, 38, 332);
+      say("READ THE ATTACK — PUNISH WINDOW!", "#6fffe0");
+      SFX.dodge();
+    }
   } else if (F.blk) {
     F.stun = 0.9;
     t = "GUARD BREAK ";
   } else gain("dur", 1.2);
   const fr = d / (A.dur * 10);
+  F.effort.taken += Math.min(1, fr);
   F.hp -= fr;
   F.lastHit = F.t;
   F.flash = 1;
@@ -1530,6 +1725,13 @@ function estrike() {
     F.fl = 0.6;
     return;
   }
+  const strikeRange = e.type === "ki" ? 250 : 150;
+  if (Math.abs(F.ex - F.px) > strikeRange) {
+    say("WHIFF — TOO FAR!", "#ffe34d", 1);
+    F.momentum = Math.min(100, (F.momentum || 0) + 6);
+    e.state = "idle"; e.t = 0.65;
+    return;
+  }
   e.lunge = 1;
   const auto =
     inUI() && /Sign/.test(FL()[F.form][0]) && Math.random() < 0.12
@@ -1542,6 +1744,7 @@ function estrike() {
             ? "TIME SKIP!"
             : null;
   if (F.dodge > 0 || auto) {
+    F.effort.dodges++;
     say(auto || "DODGED!", "#7fe");
     SFX.dodge();
     F.slow = 0.4;
@@ -1559,8 +1762,24 @@ function estrike() {
   e.state = "idle";
   e.t = (rand(0.7, 1.5) / clamp(E.spd / A.spd, 0.6, 2)) * (e.hold ? 1.7 : 1) * (e.inj.arm ? 1.4 : 1);
 }
+function evolveBioAndroid() {
+  if (P.race !== "Bio-Android" || !F || F.over) return;
+  const next = Math.min(BIO_STAGES.length - 1, (P.bioStage || 0) + 1);
+  if (next === (P.bioStage || 0) || P.fights < BIO_STAGES[next].wins) {
+    say(next === (P.bioStage || 0) ? "Evolution complete" : "Insufficient combat data", "#c7f28a");
+    return;
+  }
+  if (F.ki < 25) { say("Need 25% ki to evolve", "#ccc"); return; }
+  P.bioStage = next;
+  F.ki -= 25;
+  F.fl = 1; F.shake = 18; F.hp = Math.min(1, F.hp + 0.2);
+  SFX.form(); fx(90, 115, FC["Bio-Android"][next], 42, true);
+  if (!F.sandbox) save();
+  say(BIO_STAGES[next].name + "!", "#c7f28a");
+}
 function toForm() {
   if (!F || F.over) return;
+  if (P.race === "Bio-Android") { evolveBioAndroid(); return; }
   const un = FL()
     .map((f, i) => (P.fights >= f[1] ? i : -1))
     .filter((i) => i >= 0);
@@ -1594,6 +1813,16 @@ function upd(dt) {
     A = pe(),
     E = ee();
   F.t += dt;
+  if (F.t - F.lastAct < 3 || F.blk || F.chg) F.effort.active += dt;
+  F.perfectGuard = Math.max(0, F.perfectGuard - dt);
+  F.debris.forEach(d => { d.x += d.vx*dt; d.y += d.vy*dt; d.vy += 260*dt; d.l -= dt; });
+  F.debris = F.debris.filter(d => d.l > 0);
+  if (F.form >= 0) {
+    const nm = FL()[F.form][0];
+    if ((P.gene === "Legendary Saiyan" && /Legendary/.test(nm)) || (P.gene === "Hulk" && /Gamma Rage/.test(nm))) {
+      F.ramp = Math.min(3.25, (F.ramp || 1) + dt * 0.055 + (F.combo >= 3 ? dt * 0.012 : 0));
+    }
+  }
   [
     "act",
     "stun",
@@ -1636,6 +1865,11 @@ function upd(dt) {
     if (Math.random() < 0.25) drip(90);
   }
   if (e.sx.bleed > 0 && Math.random() < 0.25) drip(270);
+  if (e.sx.burn > 0 && !e.ng) {
+    e.hp -= 0.014 * dt;
+    if (Math.random() < 0.2) fx(F.ex, 132, "#ff8a32", 2, true);
+    if (e.hp <= 0) { end(true); return; }
+  }
   if (e.sx.bleed > 0 && !e.ng) {
     e.hp -= 0.008 * dt;
     if (e.hp <= 0) {
@@ -1650,9 +1884,11 @@ function upd(dt) {
   }
   if (e.ng && !e.hold && e.hp < 0.35) e.fm = Math.min(80, e.fm * (1 + 0.3 * dt));
   if (!F.blk && !F.stun) F.sta = Math.min(100, F.sta + 14 * dt * (1 - F.fat / 120) * (F.inj.ribs ? 0.5 : 1));
+  if (F.t - F.lastAct > 2) F.momentum = Math.max(0, (F.momentum || 0) - 9 * dt);
   if (F.t - F.lastAct > 1)
     F.fat = Math.max(0, F.fat - (F.chg ? (P.gene === "Captain Ginyu" ? 14 : 7) : 4) * dt);
   if (F.chg && !F.blk) {
+    F.momentum = Math.min(100, (F.momentum || 0) + 8 * dt);
     F.ki = Math.min(
       100,
       F.ki +
@@ -1667,7 +1903,6 @@ function upd(dt) {
   if (F.form >= 0) {
     const fm = pf().fm,
       nm = FL()[F.form][0];
-    P.fmas[nm] = (P.fmas[nm] || 0) + dt * 3;
     F.ki -=
       (1 + 0.8 * L10(fm)) *
       cfg.drain *
@@ -1685,11 +1920,15 @@ function upd(dt) {
   }
   if (P.race === "Namekian" && F.t - F.lastHit > 3)
     F.hp = Math.min(1, F.hp + 0.015 * (P.gene === "Dragon Clan" ? 2 : 1) * dt);
+  if (P.race === "Bio-Android" && F.t - F.lastHit > 2) {
+    F.hp = Math.min(1, F.hp + (0.006 + 0.002 * (P.bioStage || 0)) * dt);
+    F.ki = Math.min(100, F.ki + (0.35 + 0.1 * (P.bioStage || 0)) * dt);
+  }
   if (P.race === "Saiyan" && F.hp < 0.25 && !F.zen) {
     F.zen = true;
     F.hp = Math.min(1, F.hp + 0.2);
-    for (const k in P.st) P.st[k] *= 1 + cfg.zenkai;
-    say("ZENKAI!", "#ffd84a");
+    F.rage = Math.max(F.rage, 10);
+    say("ZENKAI! (temporary battle surge)", "#ffd84a");
   }
   if (P.gene === "Captain Ginyu" && F.hp < 0.25 && !F.bc) {
     F.bc = 1;
@@ -1702,6 +1941,7 @@ function upd(dt) {
   }
   if (e.stun > 0) e.stun -= dt;
   else {
+    if (e.state === "idle") F.ex += Math.sign(F.px - F.ex) * Math.min(Math.max(0, Math.abs(F.px - F.ex) - 88), 22 * dt);
     e.t -= dt;
     if (e.state === "idle" && e.t <= 0) {
       e.type = Math.random() < 0.35 ? "ki" : "melee";
@@ -1725,18 +1965,21 @@ function end(win) {
   if (F.over) return;
   F.over = true;
   SFX[win ? "win" : "lose"]();
-  const old = { ...P.st },
-    ob = F.ob,
-    G =
-      Math.pow(cfg.growth, win ? 1 : 0.4) *
-      (P.race === "Saiyan" ? 1.2 : 1) *
-      (P.gene === "Legendary Saiyan" ? 1.15 : 1),
-    tot = Object.values(F.u).reduce((a, b) => a + b, 0);
-  for (const k in P.st)
-    P.st[k] *= G * (0.8 + 1.2 * (tot ? F.u[k] / tot : 1 / 6)) * (TYPES[P.type].b[k] ? 1.1 : 1);
-  const bal = balance(),
+  const old = { ...P.st }, ob = F.ob;
+  const tot = Object.values(F.u).reduce((a, b) => a + b, 0);
+  const replayFactor = F.wasCleared ? 0.12 : 1;
+  const meaningfulEffort = Math.min(1, (F.effort.actions * 0.035 + F.effort.blocks * 0.045 + F.effort.parries * 0.12 + F.effort.dodges * 0.035 + Math.min(0.25, F.effort.dealt * 0.08 + F.effort.taken * 0.04) + Math.min(0.25, F.effort.active * 0.012)));
+  if (!F.sandbox) {
+    for (const k in P.st) {
+      const share = tot ? F.u[k] / tot : 1/6;
+      const statEffort = Math.min(1, share * 4 + F.effort.active * 0.002);
+      const reward = ((win ? 0.008 : 0.002) + meaningfulEffort * 0.035 * statEffort) * clamp((cfg.growth ?? DEF.growth) / DEF.growth, 0.25, 2) * clamp((cfg.inFight ?? DEF.inFight) / DEF.inFight, 0.25, 2);
+      P.st[k] *= 1 + reward * replayFactor * (P.race === "Saiyan" ? 1.08 : 1) * (P.gene === "Legendary Saiyan" ? 1.05 : 1);
+    }
+  }
+  const bal = (F.sandbox || F.wasCleared) ? 0 : balance(),
     evo =
-      win && (F.i + 1) % 3 === 0
+      !F.sandbox && !F.wasCleared && win && (F.i + 1) % 3 === 0
         ? (() => {
             try {
               return evolve();
@@ -1745,20 +1988,21 @@ function end(win) {
             }
           })()
         : "";
-  if (win) P.fights = Math.max(P.fights, F.i + 1);
-  P.fights > 36 && (P.fights = 36);
-  if (P.race === "Alien") P.alien.f[0][3] = Math.round(8 * Math.pow(1.2, P.fights));
+  if (!F.sandbox && win && F.i !== SEC) P.fights = Math.max(P.fights, F.i + 1);
+  P.fights = Math.min(P.fights, EN.length);
+  P.progress = P.progress || {}; if (!F.sandbox) P.progress[P.campaign] = P.fights;
+  if (!F.sandbox && P.race === "Alien") P.alien.f[0][3] = Math.round(8 * Math.pow(1.2, P.fights));
   const nu = [];
-  Object.keys(STY).forEach((k) => {
+  if (!F.sandbox) Object.keys(STY).forEach((k) => {
     if (P.fights >= STY[k].u && !P.styles.includes(k)) {
       P.styles.push(k);
       nu.push(k);
     }
   });
-  save();
+  if (!F.sandbox) save();
   setTimeout(() => {
     ov(
-      `<h2>${win ? (F.i >= 35 ? "SAGA COMPLETE! You beat the boss!" : "Victory!") : "Defeated... but you learned"}</h2><div>Power ${fmt(ob)} → <b>${fmt(bp(P.st))}</b></div>${nu.length ? `<p style="color:#7dff4a">New style learned: ${nu.join(", ")}!</p>` : ""}${bal ? `<p class="mu">Balance: your weaker stats caught up toward your strongest.</p>` : ""}${evo ? `<p style="color:#7dff4a">Your build evolved: ${evo}!</p>` : ""}` +
+      `<h2>${F.sandbox ? "SANDBOX TEST COMPLETE" : win ? (F.i === SEC ? "SECRET CHALLENGER DEFEATED!" : F.i >= EN.length - 1 ? "CAMPAIGN COMPLETE!" : "Victory!") : "Defeated... but you learned"}</h2><div>Power ${fmt(ob)} → <b>${fmt(bp(P.st))}</b></div>${nu.length ? `<p style="color:#7dff4a">New style learned: ${nu.join(", ")}!</p>` : ""}${bal ? `<p class="mu">Balance: your weaker stats caught up toward your strongest.</p>` : ""}${evo ? `<p style="color:#7dff4a">Your build evolved: ${evo}!</p>` : ""}` +
         Object.keys(NM)
           .map((k) => `<div class="mu">${NM[k]}: ${fmt(old[k])} → ${fmt(P.st[k])}</div>`)
           .join("") +
@@ -1767,11 +2011,11 @@ function end(win) {
               .filter((f) => f[1] === P.fights)
               .map((f) => f[0])}!</p>`
           : ""),
-      '<button class="big" onclick="menu()">Main Menu</button>' +
-        (win && F.i < 35
+      (F.sandbox ? '<button class="big" onclick="sandboxReturn()">Back to Sandbox</button><button class="big alt" onclick="exitSandbox()">Exit Sandbox</button>' : '<button class="big" onclick="menu()">Main Menu</button>') +
+        (!F.sandbox && win && F.i < EN.length - 1
           ? `<button class="big alt" onclick="startFight(${F.i + 1})">Next Fight</button>`
           : "") +
-        `<button class="big alt" onclick="startFight(${F.i})">Retry / Replay</button>`,
+        (F.sandbox ? '' : `<button class="big alt" onclick="startFight(${F.i})">Retry / Replay</button>`),
     );
   }, 900);
 }
@@ -2024,6 +2268,16 @@ function fighter(x, face, o) {
       c.lineTo(6, -77);
       c.fill();
       c.fillRect(-17, -56, 6, 26);
+      if (o.design === "Bio-Android") {
+        const stage = o.bioStage || 0;
+        c.fillStyle = ["#1b4a2b","#17452b","#163b28","#102e26","#092b29"][stage];
+        c.fillRect(-11,-58,22,36);
+        c.fillStyle = ["#b2e879","#c9f18a","#d9f5a2","#e9ffd0","#a8fff0"][stage];
+        c.fillRect(-7,-49,5,4); c.fillRect(2,-49,5,4);
+        c.fillStyle = "#1a3a1a";
+        if (stage >= 2) { c.beginPath(); c.moveTo(-9,-78); c.lineTo(-15,-98); c.lineTo(-2,-85); c.lineTo(0,-103); c.lineTo(5,-84); c.lineTo(15,-97); c.lineTo(9,-76); c.fill(); }
+        if (stage >= 3) { c.strokeStyle="#d9f5a2"; c.lineWidth=2; c.beginPath(); c.arc(0,-44,15,0,Math.PI*2); c.stroke(); }
+      }
     }
     const sh = [
         [8, -52],
@@ -2045,6 +2299,37 @@ function fighter(x, face, o) {
         const hh = hand(o, i);
         arm(sh[i][0], sh[i][1] + k * 7, [hh[0], hh[1] + k * 7], sk, o.claws);
       }
+  }
+  if (o.design === "Vegeta" || o.design === "Goku" || o.design === "Raditz" || o.design === "Nappa") {
+    // Distinctive Saiyan armor / hair silhouettes rather than generic humanoid hair.
+    if (o.design === "Vegeta") {
+      c.fillStyle = "#111"; c.beginPath(); c.moveTo(-11,-75); c.lineTo(-9,-91); c.lineTo(-3,-82); c.lineTo(0,-99); c.lineTo(5,-83); c.lineTo(11,-92); c.lineTo(10,-74); c.fill();
+      c.fillStyle="#e8e8f0"; c.fillRect(-12,-55,24,8); c.fillStyle="#243a86"; c.fillRect(-9,-52,18,5);
+    } else if (o.design === "Goku" || o.design === "Raditz") {
+      c.fillStyle = o.hair || "#111"; c.beginPath(); c.moveTo(-12,-75); [[-15,-91],[-7,-84],[-2,-101],[3,-84],[13,-96],[9,-76]].forEach(pt=>c.lineTo(pt[0],pt[1])); c.closePath(); c.fill();
+    }
+  }
+  // Character-specific silhouettes and costume cues.
+  if (o.design === "Beerus") {
+    c.fillStyle = "#b79ad8";
+    c.beginPath(); c.moveTo(-9,-75); c.lineTo(-17,-96); c.lineTo(-3,-82); c.moveTo(9,-75); c.lineTo(17,-96); c.lineTo(3,-82); c.fill();
+    c.fillStyle="#d9a520"; c.fillRect(-12,-54,24,5);
+  } else if (o.design === "Hit") {
+    c.fillStyle="#382c58"; c.fillRect(-13,-58,26,38);
+    c.fillStyle="#a9b7ca"; c.fillRect(-12,-78,24,5);
+  } else if (o.design === "Goku Black" && o.fi >= 0) {
+    c.fillStyle="#ff9ac1"; c.beginPath(); c.moveTo(-12,-75); c.lineTo(-8,-92); c.lineTo(-2,-82); c.lineTo(4,-98); c.lineTo(9,-81); c.lineTo(13,-91); c.lineTo(11,-73); c.fill();
+  } else if (o.design === "Broly" || o.design === "Bojack") {
+    c.fillStyle=o.design === "Broly" ? "#172018" : "#f3f3f3";
+    c.beginPath(); c.moveTo(-13,-72); c.lineTo(-18,-102); c.lineTo(-6,-84); c.lineTo(0,-108); c.lineTo(6,-84); c.lineTo(18,-101); c.lineTo(13,-70); c.fill();
+  } else if (o.design === "Fused Zamasu") {
+    c.fillStyle="#f2f2f2"; c.beginPath(); c.moveTo(-10,-76); c.lineTo(-13,-95); c.lineTo(-2,-84); c.lineTo(3,-101); c.lineTo(12,-82); c.lineTo(10,-73); c.fill();
+    c.fillStyle="#8ee0a0"; c.fillRect(8,-48,5,18);
+  } else if (o.design === "Android 17" || o.design === "Android 18") {
+    c.fillStyle="#f0e6d6"; c.fillRect(-12,-54,24,5);
+    c.fillStyle="#d43b32"; c.fillRect(-5,-51,10,3);
+  } else if (o.design === "Baby") {
+    c.fillStyle="#e8e8e8"; c.beginPath(); c.moveTo(-12,-76); c.lineTo(-17,-95); c.lineTo(-4,-83); c.lineTo(4,-96); c.lineTo(13,-78); c.fill();
   }
   if (ps === "block") {
     c.globalAlpha = 0.5 + 0.3 * Math.sin(t * 14) + (o.bf || 0) * 0.4;
@@ -2095,7 +2380,7 @@ function draw() {
     lk = LK(nm),
     fa = P.race === "Frost Demon",
     fk = F.form;
-  let sk = P.race === "Namekian" ? "#35b04f" : P.race === "Alien" ? P.alien.skin : P.skin,
+  let sk = P.race === "Namekian" ? "#35b04f" : P.race === "Bio-Android" ? ["#6eaa43","#80c84d","#93d86a","#b4e67b","#d3f4a0"][P.bioStage || 0] : P.race === "Alien" ? P.alien.skin : P.skin,
     acc = null;
   if (fa) {
     const q = P.fc;
@@ -2119,8 +2404,11 @@ function draw() {
               : F.chg
                 ? "charge"
                 : "idle",
-    fc = F.form >= 0 ? FCc(F.form) : null;
-  fighter(90, 1, {
+    fc = P.race === "Bio-Android" ? FC["Bio-Android"][P.bioStage || 0] : F.form >= 0 ? FCc(F.form) : null;
+  drawArenaDamage();
+  fighter(F.px || 90, F.ex >= F.px ? 1 : -1, {
+    design: P.race === "Bio-Android" ? "Bio-Android" : P.race,
+    bioStage: P.bioStage || 0,
     s: (lk.s || 1) * (fa ? [1, 1.2, 1.1, 1, 1, 1][fk + 1] : 1),
     pose: ps,
     lunge: F.lunge,
@@ -2129,7 +2417,7 @@ function draw() {
     bf: F.bflash,
     flash: F.flash,
     skin: sk,
-    outfit: fa ? sk : GL.out || P.outfit,
+    outfit: fa ? sk : P.race === "Bio-Android" ? "#173b28" : GL.out || P.outfit,
     hair: lk.h || GL.h || P.hair,
     spiky: P.race === "Saiyan",
     ant: P.race === "Namekian",
@@ -2163,7 +2451,9 @@ function draw() {
     fn = e.fi >= 0 ? e.forms[e.fi].n : "",
     ef = EFL[fn] || {},
     esk = ef.sk || ea.sk || e.col;
-  fighter(270, -1, {
+  fighter(F.ex || 270, F.px >= F.ex ? 1 : -1, {
+    design: e.n,
+    fi: e.fi,
     s: (ea.s || 1) * (ef.s || 1),
     pose: ep,
     lunge: e.lunge,
@@ -2180,7 +2470,7 @@ function draw() {
     spk: ea.spk,
     hor: ef.hor || ea.hor,
     fat: ea.fat,
-    cell: ea.cell,
+    cell: ea.cell || P.race === "Bio-Android",
     frost: ea.frost,
     fk: ea.frost ? (FK[fn] === undefined ? -1 : FK[fn]) : undefined,
     fa: ea.frost ? "#8e44ad" : null,
@@ -2258,13 +2548,15 @@ const SXN = (o) => [
 function hud() {
   const A = pe(),
     E = ee();
-  $("pi").textContent = `${P.race} · BP ${fmt(bp(P.st) * A.fm)}${F.form >= 0 ? " · " + FL()[F.form][0] : ""}`;
+  const ramping = F.form >= 0 && ((P.gene === "Legendary Saiyan" && /Legendary/.test(FL()[F.form][0])) || (P.gene === "Hulk" && /Gamma Rage/.test(FL()[F.form][0])));
+  $("pi").textContent = `${P.race} · BP ${fmt(bp(P.st) * A.fm)}${F.form >= 0 ? " · " + FL()[F.form][0] : ""}${ramping ? " · RAGE ×" + (F.ramp || 1).toFixed(2) : ""}`;
   $("ei").textContent =
     `${F.e.n}${F.e.hold ? " (holding back)" : ""} · BP ${fmt(Object.values(F.e.st).reduce((a, b) => a + b) * E.fm)}`;
   bar("ph", F.hp, "HP " + fmt(F.hp * A.dur * 10));
   bar("pk", F.ki / 100, "Ki " + F.ki.toFixed(0) + "%");
   bar("ps", F.sta / 100, "Stamina");
   bar("pf", F.fat / 100, "Fatigue " + F.fat.toFixed(0) + "%");
+  bar("pm", (F.momentum || 0) / 100, "Momentum " + Math.round(F.momentum || 0) + "%");
   bar("eh", F.e.hp, "HP " + fmt(Math.max(0, F.e.hp) * E.dur * 10));
   $("pst").textContent = [
     ...SXN(F),
@@ -2277,7 +2569,7 @@ function hud() {
     .filter(Boolean)
     .join(" · ");
   $("est").textContent = SXN(F.e).join(" · ");
-  $("form").textContent = F.form < 0 ? "Power Up" : FL()[F.form][0];
+  $("form").textContent = P.race === "Bio-Android" ? "Evolve" : F.form < 0 ? "Power Up" : FL()[F.form][0];
 }
 // ============================================================
 // MAIN LOOP and TOUCH BUTTONS
@@ -2287,11 +2579,49 @@ function loop(t) {
   const dt = Math.min(0.05, (t - last) / 1000 || 0);
   last = t;
   if (F && !$("game").hidden) {
-    if (!F.over) upd(F.slow > 0 ? dt * 0.4 : dt);
-    draw();
-    hud();
+    try {
+      if (!F.e || !F.e.st || !F.e.forms) recoverGame();
+      else {
+        if (!F.over && F.hp <= 0) end(false);
+        if (!F.over) upd(F.slow > 0 ? dt * 0.4 : dt);
+        draw(); hud();
+      }
+    } catch (err) {
+      console.error("Fight recovered after runtime error", err);
+      recoverGame();
+    }
   }
   requestAnimationFrame(loop);
+}
+function movePlayer(dir) {
+  if (!F || F.over) return;
+  F.px = clamp(F.px + dir * 18, 28, 332);
+  F.facing = dir;
+  if (Math.abs(F.ex - F.px) < 78) F.px = clamp(F.px - dir * 7, 28, 332);
+}
+function beginBlock() {
+  if (!F || F.over) return;
+  F.blk = true;
+  if (F.e.state === "tele" && F.e.t <= 0.24 && F.e.t > 0) F.perfectGuard = 0.24;
+}
+function drawArenaDamage() {
+  // Buildings frame the arena; repeated knockback visibly breaks the near structure.
+  c.save();
+  [0,302].forEach((bx,side)=>{
+    c.fillStyle = "#30394d"; c.fillRect(bx, 102, 58, 83);
+    c.fillStyle = "#59657a"; c.fillRect(bx+7, 110, 44, 75);
+    c.fillStyle = "#ffd98a";
+    for (let y=0;y<3;y++) for (let x=0;x<3;x++) c.fillRect(bx+12+x*13, 118+y*19, 6, 9);
+    if (F.buildingDamage > 0) {
+      c.fillStyle = "#202536"; c.fillRect(bx, 102, 58, 83*F.buildingDamage);
+      c.strokeStyle = "#171b26"; c.lineWidth = 2; c.beginPath();
+      if (side) { c.moveTo(bx+8,112); c.lineTo(bx+22,132); c.lineTo(bx+16,148); c.lineTo(bx+36,163); }
+      else { c.moveTo(bx+50,112); c.lineTo(bx+36,132); c.lineTo(bx+42,148); c.lineTo(bx+22,163); }
+      c.stroke();
+    }
+  });
+  F.debris.forEach(d => { c.globalAlpha = clamp(d.l,0,1); c.fillStyle=d.c; c.fillRect(d.x,d.y,4,4); });
+  c.restore();
 }
 const tap = (id, fn) =>
     ($(id).onpointerdown = (e) => {
@@ -2323,24 +2653,28 @@ tap("t2", tt(1));
 tap("form", toForm);
 tap("dodge", dodge);
 hold("block", "blk");
+$("block").onpointerdown = e => { e.preventDefault(); beginBlock(); };
+tap("left", () => movePlayer(-1));
+tap("right", () => movePlayer(1));
 hold("charge", "chg");
 // ---------- Keyboard & mouse (PC) ----------
 // Tap keys run once per press; hold keys set a flag on the fight (F.blk / F.chg) while down.
-const KEYMAP = { q: () => atk(MV.blast), e: dodge, r: toForm, 1: tt(0), 2: tt(1) };
+const KEYMAP = { q: () => atk(MV.blast), e: dodge, r: toForm, 1: tt(0), 2: tt(1), a: () => movePlayer(-1), d: () => movePlayer(1), arrowleft: () => movePlayer(-1), arrowright: () => movePlayer(1) };
 const HOLDKEYS = { shift: "blk", " ": "blk", c: "chg" };
 const inFight = () => F && !F.over && !$("game").hidden && $("ov").hidden;
 const lit = (key, on) =>
   document.querySelectorAll('#keys [data-key="' + key + '"]').forEach((el) => el.classList.toggle("on", on));
 addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && F && !$("game").hidden) { e.preventDefault(); if (F.sandbox) exitSandbox(); else menu(); return; }
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || !inFight()) return;
   const k = e.key.toLowerCase();
   if (KEYMAP[k]) {
     e.preventDefault();
-    if (!e.repeat) KEYMAP[k]();
+    if (!e.repeat || ["a", "d", "arrowleft", "arrowright"].includes(k)) KEYMAP[k]();
     lit(k, true);
   } else if (HOLDKEYS[k]) {
     e.preventDefault();
-    F[HOLDKEYS[k]] = true;
+    if (HOLDKEYS[k] === "blk") beginBlock(); else F[HOLDKEYS[k]] = true;
     lit(k === " " ? "shift" : k, true);
   }
 });
