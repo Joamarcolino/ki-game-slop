@@ -1,20 +1,34 @@
 # Ki Fist: Limitless Saga (portable)
 
 Plain HTML + CSS + JavaScript. No build step, no dependencies, no internet needed.
+The look is inspired by shadcn/ui (zinc dark theme, cards, badges, kbd keys) but written in plain CSS, so it works anywhere.
 
-## Run in VS Code
-1. Open this folder in VS Code (File > Open Folder).
-2. Install the "Live Server" extension, right-click `index.html` > "Open with Live Server".
-   (Or just double-click `index.html` to open it in a browser.)
-3. Best on a phone-size window: press F12 in the browser and use the device toolbar.
+## Run
+- VS Code: open the folder, install the "Live Server" extension, right-click `index.html` > Open with Live Server.
+- Or just double-click `index.html`. Deploys as-is on Vercel/Netlify/GitHub Pages (static site).
+
+## Controls
+| PC (mouse + keyboard) | Phone / tablet |
+|---|---|
+| Click = attack, Right-click = heavy | on-screen buttons |
+| Q = ki blast, 1 / 2 = your techniques | |
+| E = dodge, Shift (or Space) = block (hold) | |
+| C = charge ki (hold), R = transform | |
+
+On PC the touch buttons are hidden and a key-hint bar is shown (keys light up when pressed).
 
 ## Files
-- `index.html` - page layout and buttons
-- `style.css` - DBZ-style theme
-- `game.js` - all game logic (data tables at the top: `FORMS`, `ED` enemies, `STY` styles, `GENE` bloodlines, `TT` techniques)
-- `INSTRUCTIONS.md` - system notes and changelog: read it before editing, update it after every change
+- `index.html` - page structure (fight screen, key hints, touch buttons)
+- `style.css` - theme; edit the tokens at the top (`:root`) to re-theme
+- `game.js` - all game logic, with a "QUICK MAP" at the top and section banners
+- `INSTRUCTIONS.md` - system notes + changelog (read before editing, update after)
 
-## Notes
-- Progress is saved in the browser's localStorage (clear site data to reset).
-- The Config "Ask Claude" tuning works in standalone mode if you paste an Anthropic API key in Config (stored only in your browser; it is sent straight to api.anthropic.com).
-- Sound uses the browser's WebAudio (no files).
+## Where to change things
+- Balance numbers: `DEF` in `game.js` (or the in-game Config menu)
+- New enemy: add to `ED` (+ looks in `EA`), then update the fight counts (`BOSS`, `SEC`, "36"/"35")
+- New form: `FORMS` + `FC` + `DEF.fm` (same length) + look in `LK`
+- New bloodline: `GENE` + `applyGene()` + pool in `newGame()` + `GENELOOK`
+- New technique type: `TT`
+- Controls: bottom of `game.js` (`KEYMAP`, `HOLDKEYS`) and `index.html` (`#keys` hints)
+
+Progress saves in your browser (localStorage). "Ask Claude" in Config needs an Anthropic API key when run standalone.

@@ -1,19 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ki Fist: Limitless Saga</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ki Fist: Limitless Saga</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="scr" id="menu"></div>
-<div class="scr" id="game" hidden>
-<div style="display:flex;gap:8px"><div style="flex:1"><div class="mu" id="pi"></div><div class="b" id="ph"><i style="background:#2ecc71"></i><u></u></div><div class="b" id="pk"><i style="background:#3aa0ff"></i><u></u></div><div class="b" id="ps"><i style="background:#f1c40f"></i><u></u></div><div class="b" id="pf"><i style="background:#e67e22"></i><u></u></div><div class="mu" id="pst" style="min-height:15px;color:#ffb"></div></div>
-<div style="flex:1"><div class="mu" id="ei" style="text-align:right"></div><div class="b" id="eh"><i style="background:#e74c3c"></i><u></u></div><div class="mu" id="est" style="min-height:15px;color:#ffb;text-align:right"></div></div></div>
-<canvas id="cv" width="360" height="200"></canvas>
-<div id="pad"><button id="punch">Punch</button><button id="heavy">Heavy</button><button id="blast">Ki Blast</button><button id="t1"></button><button id="t2"></button><button id="form">Form</button><button id="block">Block (hold)</button><button id="dodge">Dodge</button><button id="charge">Charge (hold)</button></div></div>
-<div id="ov" hidden></div>
-<script src="game.js"></script>
+  <!-- Main menu: filled in by menu() in game.js -->
+  <main class="scr" id="menu"></main>
+
+  <!-- Fight screen -->
+  <main class="scr" id="game" hidden>
+    <!-- Status bars (game.js updates the <i> width and <u> text; keep them touching, no whitespace) -->
+    <section id="hud">
+      <div>
+        <div class="mu" id="pi"></div>
+        <div class="b hp" id="ph"><i></i><u></u></div>
+        <div class="b ki" id="pk"><i></i><u></u></div>
+        <div class="b stamina" id="ps"><i></i><u></u></div>
+        <div class="b fatigue" id="pf"><i></i><u></u></div>
+        <div class="mu status" id="pst"></div>
+      </div>
+      <div>
+        <div class="mu" id="ei" style="text-align:right"></div>
+        <div class="b foe" id="eh"><i></i><u></u></div>
+        <div class="mu status" id="est" style="text-align:right"></div>
+      </div>
+    </section>
+
+    <canvas id="cv" width="720" height="400"></canvas>
+
+    <!-- PC controls: shown only with a mouse (see style.css). data-key lights up while pressed. -->
+    <div id="keys" aria-label="Keyboard and mouse controls">
+      <span data-key="m0"><kbd>Click</kbd> Attack</span>
+      <span data-key="m2"><kbd>Right-click</kbd> Heavy attack</span>
+      <span data-key="q"><kbd>Q</kbd> Ki blast</span>
+      <span data-key="1"><kbd>1</kbd> <b id="k1">Technique 1</b></span>
+      <span data-key="2"><kbd>2</kbd> <b id="k2">Technique 2</b></span>
+      <span data-key="e"><kbd>E</kbd> Dodge</span>
+      <span data-key="shift"><kbd>Shift</kbd> Block (hold)</span>
+      <span data-key="c"><kbd>C</kbd> Charge ki (hold)</span>
+      <span data-key="r"><kbd>R</kbd> Transform</span>
+    </div>
+
+    <!-- Touch controls (phones/tablets) -->
+    <div id="pad">
+      <button id="punch">Punch</button>
+      <button id="heavy">Heavy</button>
+      <button id="blast">Ki Blast</button>
+      <button id="t1"></button>
+      <button id="t2"></button>
+      <button id="form">Form</button>
+      <button id="block">Block (hold)</button>
+      <button id="dodge">Dodge</button>
+      <button id="charge">Charge (hold)</button>
+    </div>
+  </main>
+
+  <!-- Dialog overlay: stats, config, results, etc. -->
+  <div id="ov" hidden></div>
+
+  <script src="game.js"></script>
 </body>
 </html>
