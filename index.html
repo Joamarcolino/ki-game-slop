@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ki Fist: Limitless Saga</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="scr" id="menu"></div>
+<div class="scr" id="game" hidden>
+<div style="display:flex;gap:8px"><div style="flex:1"><div class="mu" id="pi"></div><div class="b" id="ph"><i style="background:#2ecc71"></i><u></u></div><div class="b" id="pk"><i style="background:#3aa0ff"></i><u></u></div><div class="b" id="ps"><i style="background:#f1c40f"></i><u></u></div><div class="b" id="pf"><i style="background:#e67e22"></i><u></u></div><div class="mu" id="pst" style="min-height:15px;color:#ffb"></div></div>
+<div style="flex:1"><div class="mu" id="ei" style="text-align:right"></div><div class="b" id="eh"><i style="background:#e74c3c"></i><u></u></div><div class="mu" id="est" style="min-height:15px;color:#ffb;text-align:right"></div></div></div>
+<canvas id="cv" width="360" height="200"></canvas>
+<div id="pad"><button id="punch">Punch</button><button id="heavy">Heavy</button><button id="blast">Ki Blast</button><button id="t1"></button><button id="t2"></button><button id="form">Form</button><button id="block">Block (hold)</button><button id="dodge">Dodge</button><button id="charge">Charge (hold)</button></div></div>
+<div id="ov" hidden></div>
+<script src="game.js"></script>
+</body>
+</html>
